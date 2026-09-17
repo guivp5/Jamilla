@@ -36,6 +36,8 @@ const mobileItems = [
   { label: 'Contato', href: '/contato' },
 ];
 
+const HEADER_SCROLL_THRESHOLD = 52;
+
 export function Eyebrow({
   children,
   className = '',
@@ -173,8 +175,10 @@ export function EditorialCard({
           <Icon size={21} strokeWidth={1.5} />
         </span>
       </div>
-      <h3>{title}</h3>
-      {description ? <p>{description}</p> : null}
+      <div className="editorial-card__body">
+        <h3>{title}</h3>
+        {description ? <p>{description}</p> : null}
+      </div>
       {href ? (
         <span className="editorial-card__link">
           Conhecer <ArrowRight size={15} aria-hidden="true" />
@@ -200,17 +204,28 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    const updateHeader = () => setIsScrolled(window.scrollY > 16);
+    let frame: number | undefined;
+    const updateHeader = () => {
+      const nextScrolled = window.scrollY > HEADER_SCROLL_THRESHOLD;
+      setIsScrolled((current) => (current === nextScrolled ? current : nextScrolled));
+    };
+    const onScroll = () => {
+      if (frame !== undefined) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = undefined;
+        updateHeader();
+      });
+    };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setIsOpen(false);
     };
 
-    const initialFrame = window.requestAnimationFrame(updateHeader);
-    window.addEventListener('scroll', updateHeader, { passive: true });
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('keydown', closeOnEscape);
     return () => {
-      window.cancelAnimationFrame(initialFrame);
-      window.removeEventListener('scroll', updateHeader);
+      if (frame !== undefined) window.cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', onScroll);
       window.removeEventListener('keydown', closeOnEscape);
     };
   }, []);
